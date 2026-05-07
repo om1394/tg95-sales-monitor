@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TG95 Sales Monitor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red:#e8193c; --red2:#c0112c; --red3:#ff4d6a;
+    --red-bg:#ffeef1; --red-glow:#e8193c33;
+    --bg:#f8f5f6; --bg2:#ffffff; --bg3:#fdf2f4; --bg4:#f3e8eb;
+    --border:#f0dde1; --border2:#e4c8ce;
+    --text:#1a0a0e; --text2:#6b3344; --text3:#a87080;
+    --gold:#f59e0b; --green:#16a34a; --blue:#2563eb;
+    --purple:#7c3aed;
+    --font-th:'Noto Sans Thai',sans-serif;
+    --font-en:'Plus Jakarta Sans',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{min-height:100vh;background:var(--bg);color:var(--text);font-family:var(--font-th);font-size:15px;line-height:1.6}
+  input,select,button{font-family:var(--font-th)}
+  input::placeholder{color:var(--text3)}
+  select option{background:#fff;color:var(--text)}
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:var(--bg)}
+  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+
+  /* HEADER */
+  .header{background:#fff;border-bottom:1px solid var(--border);padding:0 32px;display:flex;align-items:stretch;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px #e8193c0d;min-height:64px}
+  .header-left{display:flex;align-items:center;gap:18px}
+  .brand{display:flex;align-items:center;gap:12px;border-right:1px solid var(--border);padding-right:18px}
+  .brand-dot{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--red3),var(--red2));display:flex;align-items:center;justify-content:center;font-family:var(--font-en);font-size:13px;font-weight:800;color:#fff;letter-spacing:-0.5px;box-shadow:0 4px 12px var(--red-glow)}
+  .brand-name{font-family:var(--font-en);font-size:17px;font-weight:800;color:var(--text);letter-spacing:-0.3px}
+  .brand-name span{color:var(--red)}
+  .brand-sub{font-size:11px;color:var(--text3);font-weight:600;letter-spacing:0.8px;text-transform:uppercase;margin-top:1px}
+  .loading-dot{font-size:13px;color:var(--text3);animation:pulse 1s infinite;display:none}
+  .loading-dot.show{display:block}
+
+  /* NAV */
+  .nav{display:flex;align-items:stretch;gap:2px}
+  .nav-btn{padding:0 22px;border:none;cursor:pointer;font-size:14px;font-weight:600;font-family:var(--font-th);background:transparent;color:var(--text3);border-bottom:3px solid transparent;display:flex;align-items:center;gap:7px;transition:all 0.2s}
+  .nav-btn:hover{color:var(--text2);background:var(--bg3)}
+  .nav-btn.active{color:var(--red);border-bottom-color:var(--red);background:linear-gradient(180deg,transparent,var(--red-bg));font-weight:700}
+  .nav-refresh{padding:0 16px;font-size:20px;border:none;cursor:pointer;background:transparent;color:var(--text3);transition:color 0.2s}
+  .nav-refresh:hover{color:var(--red)}
+
+  /* LAYOUT */
+  .wrap{max-width:1320px;margin:0 auto;padding:28px 24px}
+  .card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:18px;box-shadow:0 2px 8px #e8193c08}
+  .card-title{font-size:11px;color:var(--text3);font-weight:700;margin-bottom:18px;text-transform:uppercase;letter-spacing:1.8px;display:flex;align-items:center;gap:8px;font-family:var(--font-en)}
+  .card-title::before{content:'';display:block;width:4px;height:16px;background:var(--red);border-radius:2px}
+
+  /* INPUTS */
+  .inp{background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:15px;outline:none;width:100%;transition:border-color 0.2s,box-shadow 0.2s}
+  .inp:focus{border-color:var(--red);box-shadow:0 0 0 3px var(--red-glow)}
+  .sel{background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:15px;outline:none;width:100%;cursor:pointer;transition:border-color 0.2s,box-shadow 0.2s}
+  .sel:focus{border-color:var(--red);box-shadow:0 0 0 3px var(--red-glow)}
+  .lbl{font-size:12px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;font-family:var(--font-en)}
+
+  /* BUTTONS */
+  .btn-primary{padding:12px 28px;border-radius:12px;border:none;cursor:pointer;font-size:15px;font-weight:700;background:linear-gradient(135deg,var(--red3),var(--red2));color:#fff;box-shadow:0 4px 16px var(--red-glow);transition:all 0.2s}
+  .btn-primary:hover{box-shadow:0 6px 24px var(--red-glow);transform:translateY(-1px)}
+  .btn-primary:disabled{opacity:0.5;transform:none;cursor:not-allowed}
+  .btn-secondary{padding:8px 16px;border-radius:10px;border:1.5px solid var(--border2);cursor:pointer;font-size:13px;font-weight:600;background:var(--bg2);color:var(--text2);transition:all 0.2s}
+  .btn-secondary:hover{background:var(--bg3)}
+  .btn-danger{padding:5px 14px;border-radius:8px;border:1px solid #ffc9d1;cursor:pointer;font-size:12px;font-weight:700;background:#fff0f2;color:var(--red)}
+
+  /* GRIDS */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px}
+  .grid3-kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+
+  /* NOTIF & ERROR */
+  .notif{position:fixed;top:76px;right:24px;z-index:999;padding:14px 22px;border-radius:14px;font-weight:700;font-size:15px;box-shadow:0 8px 32px #0002;color:#fff;animation:slideIn 0.3s ease;display:none}
+  .notif.show{display:block}
+  .error-banner{background:#fff5f6;border:1.5px solid #ffc9d1;border-radius:14px;padding:14px 18px;margin-bottom:18px;color:var(--red2);font-size:14px;display:none;justify-content:space-between;align-items:center}
+  .error-banner.show{display:flex}
+
+  /* VIEWS */
+  .view{display:none}.view.active{display:block}
+
+  /* KPI */
+  .kpi-card{background:var(--bg2);border:1.5px solid var(--border);border-radius:16px;padding:22px;position:relative;overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s}
+  .kpi-card:hover{border-color:var(--border2);box-shadow:0 4px 20px #e8193c0d}
+  .kpi-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--red),var(--red3))}
+  .kpi-icon{font-size:30px;margin-bottom:10px}
+  .kpi-val{font-size:28px;font-weight:800;font-family:var(--font-en)}
+  .kpi-label{font-size:12px;color:var(--text3);font-weight:600;margin-top:4px;letter-spacing:0.5px}
+
+  /* MEMBER CARD */
+  .member-card{background:var(--bg2);border:1.5px solid var(--border);border-radius:18px;padding:26px;margin-bottom:18px;position:relative;overflow:hidden;box-shadow:0 2px 12px #e8193c06}
+  .member-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--red),var(--red3),#ff8fa0)}
+  .member-name{font-size:22px;font-weight:800;color:var(--text)}
+  .member-count{font-size:13px;color:var(--text3);margin-top:3px}
+
+  /* BADGE */
+  .badge{padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;border:1.5px solid var(--border2);color:var(--text3);background:var(--bg3);white-space:nowrap}
+  .badge.achieved{background:linear-gradient(135deg,var(--red3),var(--red2));color:#fff;border:none;box-shadow:0 2px 10px var(--red-glow)}
+
+  /* STAT BOX */
+  .stat-box{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+  .stat-label{font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;font-family:var(--font-en)}
+  .stat-val{font-size:20px;font-weight:800;font-family:var(--font-en)}
+  .stat-full{font-size:11px;color:var(--text3);margin-top:3px}
+
+  /* PROGRESS */
+  .progress-track{background:var(--bg4);border-radius:6px;height:7px;overflow:hidden;margin-top:4px}
+  .progress-bar{height:100%;border-radius:6px;transition:width 1.2s cubic-bezier(0.4,0,0.2,1)}
+
+  /* MINI CARDS */
+  .award-mini{border-radius:14px;padding:14px 16px;border:1.5px solid var(--border)}
+  .award-mini.done{background:#f0fdf4;border-color:#bbf7d0}
+  .award-mini.todo{background:var(--bg3)}
+  .conv-mini{border-radius:14px;padding:16px;border:1.5px solid var(--border);background:var(--bg3)}
+  .conv-mini.done{background:#eff6ff;border-color:#bfdbfe}
+
+  /* CHARTS */
+  .charts-row{display:grid;grid-template-columns:1.6fr 1fr;gap:18px;margin-bottom:22px}
+
+  /* TABLE */
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{padding:10px 14px;text-align:left;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:700;border-bottom:1.5px solid var(--border);font-family:var(--font-en)}
+  td{padding:12px 14px;border-bottom:1px solid var(--border)}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:var(--bg3)}
+  .type-conv{padding:3px 12px;border-radius:8px;font-size:12px;font-weight:700;background:#eff6ff;color:#2563eb}
+  .type-normal{padding:3px 12px;border-radius:8px;font-size:12px;font-weight:700;background:#f0fdf4;color:#16a34a}
+
+  /* SECTION */
+  .section-divider{border-top:1.5px solid var(--border);padding-top:18px;margin-top:6px}
+  .section-label{font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;font-family:var(--font-en)}
+
+  @keyframes slideIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+</style>
+</head>
+<body>
+<div id="notif" class="notif"></div>
+
+<div class="header">
+  <div class="header-left">
+    <div class="brand">
+      <div class="brand-dot">AIA</div>
+      <div>
+        <div class="brand-name">TG95 <span>Sales Monitor</span></div>
+        <div class="brand-sub">Team Performance</div>
+      </div>
+    </div>
+    <div id="loading" class="loading-dot">กำลังโหลดข้อมูล...</div>
+  </div>
+  <div class="nav">
+    <button class="nav-btn active" onclick="setView('dashboard')">📊 Dashboard</button>
+    <button class="nav-btn" onclick="setView('sales')">💰 บันทึกยอดขาย</button>
+    <button class="nav-btn" onclick="setView('settings')">⚙️ ตั้งค่า</button>
+    <button class="nav-refresh" onclick="fetchAll()">⟳</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div id="error-banner" class="error-banner">
+    <span id="error-msg"></span>
+    <button class="btn-secondary" onclick="fetchAll()">ลองใหม่</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="view-dashboard" class="view active">
+    <div id="kpi-row" class="grid3-kpi" style="margin-bottom:22px"></div>
+    <div class="charts-row">
+      <div class="card"><div class="card-title">FYC / FYP รายคน</div><canvas id="barChart" height="95"></canvas></div>
+      <div class="card"><div class="card-title">แนวโน้มรายเดือน</div><canvas id="lineChart" height="95"></canvas></div>
+    </div>
+    <div id="member-cards"></div>
+  </div>
+
+  <!-- SALES -->
+  <div id="view-sales" class="view">
+    <div class="card">
+      <div class="card-title">บันทึกยอดขายลง Google Sheets</div>
+      <div class="grid3" style="margin-bottom:14px">
+        <div>
+          <label class="lbl">ชื่อสมาชิก</label>
+          <select class="sel" id="f-name"><option value="">-- เลือกชื่อสมาชิก --</option></select>
+        </div>
+        <div><label class="lbl">วันที่</label><input type="date" class="inp" id="f-date"></div>
+        <div>
+          <label class="lbl">ประเภท</label>
+          <select class="sel" id="f-type">
+            <option value="normal">ยอดขายปกติ</option>
+            <option value="convention">ยอดขาย Convention</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid2" style="margin-bottom:20px">
+        <div><label class="lbl">FYC (บาท)</label><input type="number" class="inp" id="f-fyc" placeholder="0"></div>
+        <div><label class="lbl">FYP (บาท)</label><input type="number" class="inp" id="f-fyp" placeholder="0"></div>
+      </div>
+      <button class="btn-primary" id="submit-btn" onclick="submitSale()">💾 บันทึกลง Google Sheets</button>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="card-title" id="sales-count" style="margin-bottom:0">รายการล่าสุด</div>
+        <button class="btn-secondary" onclick="fetchAll()">🔄 Refresh</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>ชื่อ</th><th>วันที่</th><th>ประเภท</th><th>FYC</th><th>FYP</th></tr></thead>
+          <tbody id="sales-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="view-settings" class="view">
+    <div class="grid2">
+
+      <!-- เพิ่ม Convention -->
+      <div class="card">
+        <div class="card-title">เพิ่ม Convention</div>
+        <div style="margin-bottom:12px">
+          <label class="lbl">ชื่อ Convention</label>
+          <input class="inp" id="s-conv-name" placeholder="เช่น Thailand Convention 2025">
+        </div>
+        <div class="grid2" style="margin-bottom:16px">
+          <div><label class="lbl">เป้า FYC (บาท)</label><input type="number" class="inp" id="s-conv-fyc" placeholder="0 = ไม่นับ"></div>
+          <div><label class="lbl">เป้า FYP (บาท)</label><input type="number" class="inp" id="s-conv-fyp" placeholder="0 = ไม่นับ"></div>
+        </div>
+        <button class="btn-primary" onclick="addConvention()">+ เพิ่ม Convention</button>
+      </div>
+
+      <!-- เพิ่มรางวัล -->
+      <div class="card">
+        <div class="card-title">เพิ่มรางวัล / คุณวุฒิ</div>
+        <div style="margin-bottom:12px">
+          <label class="lbl">ชื่อรางวัล</label>
+          <input class="inp" id="s-award-name" placeholder="เช่น MDRT, Diamond Stars">
+        </div>
+        <div class="grid2" style="margin-bottom:16px">
+          <div><label class="lbl">เป้า FYC</label><input type="number" class="inp" id="s-award-fyc" placeholder="0 = ไม่นับ"></div>
+          <div><label class="lbl">เป้า FYP</label><input type="number" class="inp" id="s-award-fyp" placeholder="0 = ไม่นับ"></div>
+        </div>
+        <button class="btn-primary" onclick="addAward()">+ เพิ่มรางวัล</button>
+      </div>
+    </div>
+
+    <!-- รายการ Convention -->
+    <div class="card">
+      <div class="card-title">รายการ Convention ทั้งหมด</div>
+      <table>
+        <thead><tr><th>ชื่อ Convention</th><th>เป้า FYC</th><th>เป้า FYP</th><th></th></tr></thead>
+        <tbody id="conventions-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- รายการรางวัล -->
+    <div class="card">
+      <div class="card-title">รายการรางวัลทั้งหมด</div>
+      <table>
+        <thead><tr><th>รางวัล</th><th>เป้า FYC</th><th>เป้า FYP</th><th></th></tr></thead>
+        <tbody id="awards-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">การเชื่อมต่อ Google Sheets</div>
+      <div style="font-size:14px;color:var(--text3);line-height:2.4">
+        Sheet ยอดขายปกติ: <span style="color:var(--green);font-weight:700">"ยอดขาย"</span><br>
+        Sheet Convention: <span style="color:var(--green);font-weight:700">"ยอดขายConvention"</span><br>
+        คอลัมน์: <span style="color:var(--blue);font-weight:700">No. | Name | Date | FYC | FYP</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyi4Wt57N2i0x4fRrUWqUbh4M5TLKoYnSh8Z4ucICdAkGpNHgDLrMLgQaOvqNY295J3/exec";
+const SHEET_NORMAL = "ยอดขาย";
+const SHEET_CONV   = "ยอดขายConvention";
+
+const AIA_COLORS = ["#e8193c","#ff4d6a","#2563eb","#16a34a","#f59e0b","#7c3aed","#0891b2","#ea580c"];
+const CHART_COLORS = { grid:"#f0dde1", tick:"#a87080" };
+
+let normalRows=[], convRows=[], settings=loadSettings();
+let barChartInst=null, lineChartInst=null;
+
+function loadSettings(){
+  try{ const r=localStorage.getItem("aia_sales_v2"); if(r) return {...defaultSettings(),...JSON.parse(r)}; }catch{}
+  return defaultSettings();
+}
+function defaultSettings(){
+  return {
+    awards:[
+      {id:"fa",     name:"FA",           fycTarget:600000,   fypTarget:0},
+      {id:"mdrt",   name:"MDRT",         fycTarget:1800000,  fypTarget:0},
+      {id:"cot",    name:"COT",          fycTarget:5400000,  fypTarget:0},
+      {id:"tot",    name:"TOT",          fycTarget:10800000, fypTarget:0},
+      {id:"diamond",name:"Diamond Stars",fycTarget:3000000,  fypTarget:0},
+    ],
+    conventions:[
+      {id:"conv1", name:"Thailand Convention", fycTarget:2000000, fypTarget:500000},
+    ]
+  };
+}
+function saveSettingsLocal(){ localStorage.setItem("aia_sales_v2",JSON.stringify(settings)); }
+
+const fmt  = n => new Intl.NumberFormat("th-TH").format(Math.round(n||0));
+const fmtS = n => { n=n||0; if(n>=1000000) return (n/1000000).toFixed(2)+"M"; if(n>=1000) return (n/1000).toFixed(0)+"K"; return String(Math.round(n)); };
+
+async function fetchSheet(name){
+  const res=await fetch(`${APPS_SCRIPT_URL}?sheet=${encodeURIComponent(name)}`);
+  if(!res.ok) throw new Error("HTTP "+res.status);
+  const data=await res.json();
+  if(data&&data.error) throw new Error(data.error);
+  return Array.isArray(data)?data:[];
+}
+async function appendRow(sheet,values){
+  const res=await fetch(APPS_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify({sheet,values})});
+  if(!res.ok) throw new Error("HTTP "+res.status);
+  return res.json();
+}
+async function fetchAll(){
+  showLoading(true); showError(false);
+  try{
+    const [n,c]=await Promise.all([fetchSheet(SHEET_NORMAL),fetchSheet(SHEET_CONV)]);
+    normalRows=n; convRows=c; render();
+  }catch(e){ showError(true,"ดึงข้อมูลไม่สำเร็จ: "+e.message); }
+  showLoading(false);
+}
+
+function parseRow(row,type){
+  return {
+    date:String(row["Date"]||""), name:String(row["Name"]||""),
+    fyc:parseFloat(String(row["FYC"]||"0").replace(/,/g,""))||0,
+    fyp:parseFloat(String(row["FYP"]||"0").replace(/,/g,""))||0,
+    type
+  };
+}
+function getAllSales(){ return [...normalRows.map(r=>parseRow(r,"normal")),...convRows.map(r=>parseRow(r,"convention"))]; }
+function getMembers(sales){ return [...new Set(sales.map(s=>s.name).filter(Boolean))]; }
+function getMemberStats(member,sales){
+  const ms=sales.filter(s=>s.name===member);
+  const totalFyc=ms.reduce((a,s)=>a+s.fyc,0);
+  const totalFyp=ms.reduce((a,s)=>a+s.fyp,0);
+  const convFyc=ms.filter(s=>s.type==="convention").reduce((a,s)=>a+s.fyc,0);
+  const convFyp=ms.filter(s=>s.type==="convention").reduce((a,s)=>a+s.fyp,0);
+  const achieved=settings.awards.filter(aw=>(aw.fycTarget<=0||totalFyc>=aw.fycTarget)&&(aw.fypTarget<=0||totalFyp>=aw.fypTarget));
+  // ตรวจสอบ convention โดยใช้ยอด convention
+  const achievedConventions=settings.conventions.filter(cv=>(cv.fycTarget<=0||convFyc>=cv.fycTarget)&&(cv.fypTarget<=0||convFyp>=cv.fypTarget));
+  return {member,totalFyc,totalFyp,convFyc,convFyp,achieved,achievedConventions,count:ms.length};
+}
+
+function render(){
+  const sales=getAllSales(), members=getMembers(sales), stats=members.map(m=>getMemberStats(m,sales));
+  renderKPI(sales,stats);
+  renderCharts(stats,sales);
+  renderMemberCards(stats);
+  renderSalesTable(sales);
+  renderAwardsTable();
+  renderConventionsTable();
+  populateNameDropdown(members);
+}
+
+function populateNameDropdown(members){
+  const sel=document.getElementById("f-name"), cur=sel.value;
+  sel.innerHTML='<option value="">-- เลือกชื่อสมาชิก --</option>';
+  members.forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=m; sel.appendChild(o); });
+  if(cur) sel.value=cur;
+}
+
+function renderKPI(sales,stats){
+  const totalAwards=stats.reduce((a,m)=>a+m.achieved.length,0);
+  const totalConv=stats.reduce((a,m)=>a+m.achievedConventions.length,0);
+  const kpis=[
+    {icon:"👥",val:stats.length,    label:"สมาชิกในทีม",     c:"#e8193c"},
+    {icon:"📋",val:sales.length,    label:"รายการทั้งหมด",   c:"#2563eb"},
+    {icon:"🏆",val:totalAwards+totalConv, label:"รางวัลที่ได้รับ", c:"#f59e0b"},
+  ];
+  document.getElementById("kpi-row").innerHTML=kpis.map(k=>`
+    <div class="kpi-card">
+      <div style="position:absolute;top:-14px;right:-14px;font-size:60px;opacity:0.05">${k.icon}</div>
+      <div class="kpi-icon">${k.icon}</div>
+      <div class="kpi-val" style="color:${k.c}">${k.val}</div>
+      <div class="kpi-label">${k.label}</div>
+    </div>`).join("");
+}
+
+function renderCharts(stats,sales){
+  const fc={family:"Noto Sans Thai",size:12};
+  const opts={responsive:true,maintainAspectRatio:true,plugins:{legend:{labels:{color:CHART_COLORS.tick,font:fc}}}};
+  if(barChartInst) barChartInst.destroy();
+  barChartInst=new Chart(document.getElementById("barChart"),{
+    type:"bar",
+    data:{labels:stats.map(m=>m.member),datasets:[
+      {label:"FYC",data:stats.map(m=>m.totalFyc),backgroundColor:"#e8193c",borderRadius:5},
+      {label:"FYP",data:stats.map(m=>m.totalFyp),backgroundColor:"#2563eb",borderRadius:5},
+      {label:"FYC Conv",data:stats.map(m=>m.convFyc),backgroundColor:"#ff8fa0",borderRadius:5},
+    ]},
+    options:{...opts,scales:{x:{ticks:{color:CHART_COLORS.tick,font:fc},grid:{color:CHART_COLORS.grid}},y:{ticks:{color:CHART_COLORS.tick,callback:v=>fmtS(v)},grid:{color:CHART_COLORS.grid}}}}
+  });
+  const map={};
+  sales.forEach(s=>{
+    if(!s.date) return;
+    const d=s.date.includes("/")?s.date.split("/").reverse().join("-"):s.date;
+    const month=String(d).substring(0,7);
+    if(!map[month]) map[month]={FYC:0,FYP:0};
+    map[month].FYC+=s.fyc; map[month].FYP+=s.fyp;
+  });
+  const months=Object.keys(map).sort().slice(-6);
+  if(lineChartInst) lineChartInst.destroy();
+  lineChartInst=new Chart(document.getElementById("lineChart"),{
+    type:"line",
+    data:{labels:months.length?months:["ยังไม่มีข้อมูล"],datasets:[
+      {label:"FYC",data:months.map(m=>map[m].FYC),borderColor:"#e8193c",backgroundColor:"#e8193c18",fill:true,tension:0.4,pointRadius:4,pointBackgroundColor:"#e8193c"},
+      {label:"FYP",data:months.map(m=>map[m].FYP),borderColor:"#2563eb",backgroundColor:"transparent",borderDash:[5,5],tension:0.4,pointRadius:3,pointBackgroundColor:"#2563eb"},
+    ]},
+    options:{...opts,scales:{x:{ticks:{color:CHART_COLORS.tick,font:fc},grid:{color:CHART_COLORS.grid}},y:{ticks:{color:CHART_COLORS.tick,callback:v=>fmtS(v)},grid:{color:CHART_COLORS.grid}}}}
+  });
+}
+
+function renderMemberCards(stats){
+  document.getElementById("member-cards").innerHTML=stats.map(ms=>{
+    // Award badges
+    const awardBadges=settings.awards.map(aw=>{
+      const ok=ms.achieved.some(a=>a.id===aw.id);
+      return `<span class="badge ${ok?"achieved":""}">${ok?"★ ":""}${aw.name}</span>`;
+    }).join("");
+    // Convention badges
+    const convBadges=settings.conventions.map(cv=>{
+      const ok=ms.achievedConventions.some(c=>c.id===cv.id);
+      return `<span class="badge" style="${ok?"background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;box-shadow:0 2px 10px #2563eb33":""}">${ok?"✈️ ":"✈️ "}${cv.name}</span>`;
+    }).join("");
+
+    // Stat boxes
+    const statBoxes=[
+      {label:"FYC รวม",       val:ms.totalFyc,c:"#e8193c"},
+      {label:"FYP รวม",       val:ms.totalFyp,c:"#2563eb"},
+      {label:"FYC Convention",val:ms.convFyc, c:"#ff4d6a"},
+      {label:"FYP Convention",val:ms.convFyp, c:"#7c3aed"},
+    ].map(s=>`
+      <div class="stat-box">
+        <div class="stat-label">${s.label}</div>
+        <div class="stat-val" style="color:${s.c}">฿${fmtS(s.val)}</div>
+        <div class="stat-full">฿${fmt(s.val)}</div>
+      </div>`).join("");
+
+    // Convention progress cards
+    const convCards=settings.conventions.map((cv,ci)=>{
+      const ok=ms.achievedConventions.some(c=>c.id===cv.id);
+      const fycPct=cv.fycTarget>0?Math.min(ms.convFyc/cv.fycTarget,1)*100:null;
+      const fypPct=cv.fypTarget>0?Math.min(ms.convFyp/cv.fypTarget,1)*100:null;
+      const c=ok?"#16a34a":"#2563eb";
+      return `<div class="conv-mini ${ok?"done":""}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:14px;font-weight:800;color:${c}">✈️ ${cv.name}</div>
+          ${ok?'<span style="font-size:12px;font-weight:700;color:#16a34a;background:#f0fdf4;padding:2px 10px;border-radius:20px;border:1px solid #bbf7d0">ผ่านแล้ว ✓</span>':''}
+        </div>
+        ${fycPct!==null?`<div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:4px">
+            <span>FYC Convention</span>
+            <span style="color:${ok?"#16a34a":c};font-weight:700">${ok?"✓ "+fmtS(ms.convFyc):"ขาด ฿"+fmtS(Math.max(0,cv.fycTarget-ms.convFyc))}</span>
+          </div>
+          <div class="progress-track"><div class="progress-bar" style="width:${fycPct}%;background:${ok?"#16a34a":c}"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:3px">
+            <span>฿${fmtS(ms.convFyc)}</span><span>เป้า ฿${fmtS(cv.fycTarget)}</span>
+          </div>
+        </div>`:""}
+        ${fypPct!==null?`<div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:4px">
+            <span>FYP Convention</span>
+            <span style="color:${fypPct>=100?"#16a34a":"#7c3aed"};font-weight:700">${fypPct>=100?"✓ "+fmtS(ms.convFyp):"ขาด ฿"+fmtS(Math.max(0,cv.fypTarget-ms.convFyp))}</span>
+          </div>
+          <div class="progress-track"><div class="progress-bar" style="width:${fypPct}%;background:${fypPct>=100?"#16a34a":"#7c3aed"}"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:3px">
+            <span>฿${fmtS(ms.convFyp)}</span><span>เป้า ฿${fmtS(cv.fypTarget)}</span>
+          </div>
+        </div>`:""}
+      </div>`;
+    }).join("");
+
+    // Award progress
+    const awardBars=settings.awards.map((aw,ai)=>{
+      const ok=ms.achieved.some(a=>a.id===aw.id);
+      const fycPct=aw.fycTarget>0?Math.min(ms.totalFyc/aw.fycTarget,1)*100:null;
+      const fypPct=aw.fypTarget>0?Math.min(ms.totalFyp/aw.fypTarget,1)*100:null;
+      const c=ok?"#16a34a":AIA_COLORS[ai%AIA_COLORS.length];
+      return `<div class="award-mini ${ok?"done":"todo"}">
+        <div style="font-size:14px;font-weight:800;color:${c};margin-bottom:10px">${ok?"✅":"🎯"} ${aw.name}</div>
+        ${fycPct!==null?`<div style="margin-bottom:7px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:4px">
+            <span>FYC</span><span style="color:${c};font-weight:700">${ok?"✓":"ขาด ฿"+fmtS(Math.max(0,aw.fycTarget-ms.totalFyc))}</span>
+          </div>
+          <div class="progress-track"><div class="progress-bar" style="width:${fycPct}%;background:${c}"></div></div>
+        </div>`:""}
+        ${fypPct!==null?`<div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:4px">
+            <span>FYP</span><span style="color:${fypPct>=100?"#16a34a":"#2563eb"};font-weight:700">${fypPct>=100?"✓":"ขาด ฿"+fmtS(Math.max(0,aw.fypTarget-ms.totalFyp))}</span>
+          </div>
+          <div class="progress-track"><div class="progress-bar" style="width:${fypPct}%;background:${fypPct>=100?"#16a34a":"#2563eb"}"></div></div>
+        </div>`:""}
+      </div>`;
+    }).join("");
+
+    return `<div class="member-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+        <div>
+          <div class="member-name">${ms.member}</div>
+          <div class="member-count">${ms.count} รายการขาย</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;max-width:520px">
+          ${awardBadges}${convBadges}
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-bottom:18px">${statBoxes}</div>
+
+      ${settings.conventions.length>0?`
+      <div class="section-divider">
+        <div class="section-label">ความคืบหน้า Convention</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">${convCards}</div>
+      </div>`:""}
+
+      <div class="section-divider">
+        <div class="section-label">ความคืบหน้ารางวัล</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">${awardBars}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderSalesTable(sales){
+  document.getElementById("sales-count").textContent=`รายการล่าสุด (${sales.length} รายการ)`;
+  document.getElementById("sales-tbody").innerHTML=[...sales].reverse().slice(0,30).map(s=>`
+    <tr>
+      <td style="font-weight:700">${s.name}</td>
+      <td style="color:var(--text3)">${s.date}</td>
+      <td><span class="${s.type==="convention"?"type-conv":"type-normal"}">${s.type==="convention"?"Convention":"ปกติ"}</span></td>
+      <td style="color:#e8193c;font-weight:700">฿${fmt(s.fyc)}</td>
+      <td style="color:#2563eb;font-weight:700">฿${fmt(s.fyp)}</td>
+    </tr>`).join("");
+}
+
+function renderAwardsTable(){
+  document.getElementById("awards-tbody").innerHTML=settings.awards.map(aw=>`
+    <tr>
+      <td style="font-weight:800">${aw.name}</td>
+      <td style="color:#e8193c;font-weight:600">${aw.fycTarget>0?"฿"+fmt(aw.fycTarget):"—"}</td>
+      <td style="color:#2563eb;font-weight:600">${aw.fypTarget>0?"฿"+fmt(aw.fypTarget):"—"}</td>
+      <td><button class="btn-danger" onclick="removeAward('${aw.id}')">ลบ</button></td>
+    </tr>`).join("");
+}
+
+function renderConventionsTable(){
+  document.getElementById("conventions-tbody").innerHTML=settings.conventions.map(cv=>`
+    <tr>
+      <td style="font-weight:800">✈️ ${cv.name}</td>
+      <td style="color:#e8193c;font-weight:600">${cv.fycTarget>0?"฿"+fmt(cv.fycTarget):"—"}</td>
+      <td style="color:#2563eb;font-weight:600">${cv.fypTarget>0?"฿"+fmt(cv.fypTarget):"—"}</td>
+      <td><button class="btn-danger" onclick="removeConvention('${cv.id}')">ลบ</button></td>
+    </tr>`).join("");
+}
+
+/* ACTIONS */
+function addConvention(){
+  const name=document.getElementById("s-conv-name").value.trim();
+  if(!name) return;
+  settings.conventions.push({
+    id:Date.now().toString(), name,
+    fycTarget:parseFloat(document.getElementById("s-conv-fyc").value)||0,
+    fypTarget:parseFloat(document.getElementById("s-conv-fyp").value)||0
+  });
+  saveSettingsLocal(); render();
+  document.getElementById("s-conv-name").value="";
+  document.getElementById("s-conv-fyc").value="";
+  document.getElementById("s-conv-fyp").value="";
+  notify("เพิ่ม Convention แล้ว");
+}
+function removeConvention(id){
+  settings.conventions=settings.conventions.filter(c=>c.id!==id);
+  saveSettingsLocal(); render(); notify("ลบ Convention แล้ว");
+}
+function addAward(){
+  const name=document.getElementById("s-award-name").value.trim();
+  if(!name) return;
+  settings.awards.push({
+    id:Date.now().toString(), name,
+    fycTarget:parseFloat(document.getElementById("s-award-fyc").value)||0,
+    fypTarget:parseFloat(document.getElementById("s-award-fyp").value)||0
+  });
+  saveSettingsLocal(); render();
+  document.getElementById("s-award-name").value="";
+  document.getElementById("s-award-fyc").value="";
+  document.getElementById("s-award-fyp").value="";
+  notify("เพิ่มรางวัลแล้ว");
+}
+function removeAward(id){
+  settings.awards=settings.awards.filter(a=>a.id!==id);
+  saveSettingsLocal(); render(); notify("ลบรางวัลแล้ว");
+}
+async function submitSale(){
+  const name=document.getElementById("f-name").value;
+  const date=document.getElementById("f-date").value;
+  const fyc=document.getElementById("f-fyc").value;
+  const fyp=document.getElementById("f-fyp").value;
+  const type=document.getElementById("f-type").value;
+  if(!name||(!fyc&&!fyp)){notify("กรุณาเลือกชื่อและกรอกยอดขาย","error");return;}
+  const btn=document.getElementById("submit-btn");
+  btn.textContent="กำลังบันทึก..."; btn.disabled=true;
+  try{
+    await appendRow(type==="convention"?SHEET_CONV:SHEET_NORMAL,["",name,date,fyc||0,fyp||0]);
+    notify("บันทึกลง Google Sheets สำเร็จ ✓");
+    document.getElementById("f-fyc").value="";
+    document.getElementById("f-fyp").value="";
+    document.getElementById("f-name").value="";
+    await fetchAll();
+  }catch(e){notify("บันทึกไม่สำเร็จ: "+e.message,"error");}
+  btn.textContent="💾 บันทึกลง Google Sheets"; btn.disabled=false;
+}
+
+/* UI */
+function setView(v){
+  document.querySelectorAll(".view").forEach(el=>el.classList.remove("active"));
+  document.getElementById("view-"+v).classList.add("active");
+  document.querySelectorAll(".nav-btn").forEach((btn,i)=>{
+    btn.classList.toggle("active",["dashboard","sales","settings"][i]===v);
+  });
+}
+function showLoading(v){document.getElementById("loading").classList.toggle("show",v);}
+function showError(v,msg=""){
+  document.getElementById("error-banner").classList.toggle("show",v);
+  if(msg) document.getElementById("error-msg").textContent="⚠️ "+msg;
+}
+function notify(msg,type="success"){
+  const el=document.getElementById("notif");
+  el.textContent=msg;
+  el.style.background=type==="error"?"linear-gradient(135deg,#e8193c,#c0112c)":"linear-gradient(135deg,#16a34a,#15803d)";
+  el.classList.add("show");
+  setTimeout(()=>el.classList.remove("show"),3000);
+}
+
+document.getElementById("f-date").value=new Date().toISOString().split("T")[0];
+renderAwardsTable();
+renderConventionsTable();
+fetchAll();
+</script>
+</body>
+</html>
